@@ -18,13 +18,10 @@ The goals / steps of this project are the following:
 
 [//]: # (Image References)
 
-[image1]: ./examples/placeholder.png "Model Visualization"
-[image2]: ./examples/placeholder.png "Grayscaling"
-[image3]: ./examples/placeholder_small.png "Recovery Image"
-[image4]: ./examples/placeholder_small.png "Recovery Image"
-[image5]: ./examples/placeholder_small.png "Recovery Image"
-[image6]: ./examples/placeholder_small.png "Normal Image"
-[image7]: ./examples/placeholder_small.png "Flipped Image"
+[image1]: ./output_images/nn.svg "Model Visualization"
+[image2]: ./output_images/center_2016_12_01_13_44_46_993.jpg "Center Lane Driving"
+[image3]: ./output_images/original.png "Original Image"
+[image4]: ./output_images/flipped.png "Flipped Image"
 
 ## Rubric Points
 ### Here I will consider the [rubric points](https://review.udacity.com/#!/rubrics/432/view) individually and describe how I addressed each point in my implementation.  
@@ -55,76 +52,63 @@ The model.py file contains the code for training and saving the convolution neur
 
 #### 1. An appropriate model architecture has been employed
 
-My model consists of a convolution neural network with 5x5 filter sizes and depths between 32 and 128 (model.py lines 18-24) 
+The chosen model is a LeNet-5 architecture.
 
-The model includes RELU layers to introduce nonlinearity (code line 20), and the data is normalized in the model using a Keras lambda layer (code line 18). 
+In detail, both convolutional layers have 5x5 filter sizes and depths of 6 respectively 16 (model.py lines 92 + 96) 
+
+The model includes RELU layers to introduce nonlinearity. However, the ReLU layers are only included after the convolutions (code lines 92 + 96), not after the fully connected layers because the network is a regression network predicting the steering angle. The data is normalized in the model using a Keras lambda layer (code line 88) and cropped to exclude the sky and the hood of the car (code line 90). 
 
 #### 2. Attempts to reduce overfitting in the model
 
-The model contains dropout layers in order to reduce overfitting (model.py lines 21). 
+The model contains dropout layers in order to reduce overfitting. These layers are inserted after the fully connected layers (model.py lines 102 + 104). 
 
-The model was trained and validated on different data sets to ensure that the model was not overfitting (code line 10-16). The model was tested by running it through the simulator and ensuring that the vehicle could stay on the track.
+The model was trained and validated on different data sets to ensure that the model was not overfitting. The split into training and validation set appears in code line 29. Creation of generators for training and validation samples is carried out in code lines 75 + 76. The model was tested by running it through the simulator and ensuring that the vehicle could stay on the track.
 
 #### 3. Model parameter tuning
 
-The model used an adam optimizer, so the learning rate was not tuned manually (model.py line 25).
+The model used an SGD optimizer with momentum for minimizing the mean squared error loss function. The learning rate was tuned manually. Its value was set to 0.0001 while the momentum was fixed at 0.9 (model.py line 109).
 
 #### 4. Appropriate training data
 
-Training data was chosen to keep the vehicle driving on the road. I used a combination of center lane driving, recovering from the left and right sides of the road ... 
-
-For details about how I created the training data, see the next section. 
+Since my own collected training data didn't induce a good driving behavior in autonomous mode I took the prerecorded sample driving data. Based on these data the vehicle could be successfully kept on the road. However, I haven't got any insight into how the training data got acquired, e.g. how many laps of center lane driving, recovery from the left and right sides of the road, driving counter-clockwise or driving smoothly around curves are included. 
 
 ### Model Architecture and Training Strategy
 
 #### 1. Solution Design Approach
 
-The overall strategy for deriving a model architecture was to ...
+During the experimental process of finding a well performing solution I was sticking to the LeNet-5 architecture.
 
-My first step was to use a convolution neural network model similar to the ... I thought this model might be appropriate because ...
+At the beginning I used an Adam optimizer minimizing the mean squared error loss and chose a learning rate of 0.001. My final solution uses a SGD optimizer with a learning rate of 0.0001 and momentum of 0.9. During the process of finding good hyperparameters I made sure to keep overfitting at a minimum level and that the model learns from the provided data. In total, training was carried out for 250 epochs.
 
-In order to gauge how well the model was working, I split my image and steering angle data into a training and validation set. I found that my first model had a low mean squared error on the training set but a high mean squared error on the validation set. This implied that the model was overfitting. 
+Based on my collected training data the car drove safely around track one right until it had crossed the bridge. Instead of staying on the real road it takes the side path on the right which might be a consequence of the data collection process.
 
-To combat the overfitting, I modified the model so that ...
+In detail, I collected 2 laps of center lane driving around track one, 1 lap of counter clockwise center lane driving around track one and 1 lap focusing on driving smoothly around curves of track two.
 
-Then I ... 
-
-The final step was to run the simulator to see how well the car was driving around track one. There were a few spots where the vehicle fell off the track... to improve the driving behavior in these cases, I ....
-
-At the end of the process, the vehicle is able to drive autonomously around the track without leaving the road.
+Because of the car taking the side path mentioned above I took the prerecorded sample driving data for training the model. Finally, the car could be kept successfully on the road throughout all of track one in autonomous mode.
 
 #### 2. Final Model Architecture
 
-The final model architecture (model.py lines 18-24) consisted of a convolution neural network with the following layers and layer sizes ...
+As already mentioned the chosen architecture is a LeNet-5 architecture with dropout layers included after the fully connected layers.
 
-Here is a visualization of the architecture (note: visualizing the architecture is optional according to the project rubric)
+Here is a visualization of the architecture. Note that in this picture the dropout layers are missing.
 
 ![alt text][image1]
 
 #### 3. Creation of the Training Set & Training Process
 
-To capture good driving behavior, I first recorded two laps on track one using center lane driving. Here is an example image of center lane driving:
+Since I finally chose the prerecorded sample driving data I cannot make any statements about the detailed collection process of the dataset.
+
+However, I guess that the following image is an example image of center lane driving:
 
 ![alt text][image2]
 
-I then recorded the vehicle recovering from the left side and right sides of the road back to center so that the vehicle would learn to .... These images show what a recovery looks like starting from ... :
+In total, the prerecorded sample drving data have got 8036 data points. After random shuffling of data 80% build the training set while 20% are held out for the validation set. Each of these data got preprocessed within their corresponding generator (on the fly) by the following two techniques.
+
+In order to consider recovery driving from the sides of the road I manually added/subtracted a small correction factor (0.2) to the steering measurement for each left respectively right image during training. By this way the model learns to steer softer/harder, especially when curves appear. Moreover, by this approach more data points are considered for training helping the model to generalize better.
+
+Furthermore each sample was augmented by flipping the image and taking the opposite angle. I thought that this could avoid biased steering angle predictions because the curves of track one are mainly left curves. For example, here is an image that has then been flipped:
 
 ![alt text][image3]
 ![alt text][image4]
-![alt text][image5]
 
-Then I repeated this process on track two in order to get more data points.
-
-To augment the data sat, I also flipped images and angles thinking that this would ... For example, here is an image that has then been flipped:
-
-![alt text][image6]
-![alt text][image7]
-
-Etc ....
-
-After the collection process, I had X number of data points. I then preprocessed this data by ...
-
-
-I finally randomly shuffled the data set and put Y% of the data into a validation set. 
-
-I used this training data for training the model. The validation set helped determine if the model was over or under fitting. The ideal number of epochs was Z as evidenced by ... I used an adam optimizer so that manually training the learning rate wasn't necessary.
+I used the training data for training the model. The validation set helped determine if the model was over or under fitting. The  number of epochs used for training was 250. As already mentioned, I used an SGD optimizer with momentum with the learning rate being set to 0.0001.
